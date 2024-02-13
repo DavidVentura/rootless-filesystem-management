@@ -19,13 +19,14 @@ fn main() {
     let destination = PathBuf::from("/destination");
     let in_disk = PathBuf::from(&args[1]);
     let out_disk = PathBuf::from(&args[2]);
+    let filesystem = PathBuf::from(&args[3]);
 
     setup::setup_environment().unwrap();
-    setup::mount(Some(&args[2]), "/destination", "ext4").unwrap();
+    setup::mount(Some(out_disk), destination.clone(), filesystem).unwrap();
 
     let res = unpack(in_disk, destination);
     match res {
-        Err(e) => println!("{}", e),
+        Err(e) => println!("{:#?}", e),
         Ok(()) => (),
     };
 

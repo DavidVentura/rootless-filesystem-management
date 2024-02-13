@@ -1,22 +1,34 @@
 use std::ffi::CString;
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 
 fn mount_pseudo(target: &str, fstype: &str) -> Result<(), io::Error> {
-    mount(None, target, fstype)
+    mount(None, PathBuf::from(target), PathBuf::from(fstype))
 }
 
-pub(crate) fn mount(source: Option<&str>, target: &str, fstype: &str) -> Result<(), io::Error> {
-    // println!("Mounting {:?} on {} as {}", source, target, fstype);
-    let src = CString::new(source.unwrap_or("none")).unwrap();
-    let tgt = CString::new(target).unwrap();
-    let fstype_ = CString::new(fstype).unwrap();
+pub(crate) fn mount(
+    source: Option<PathBuf>,
+    target: PathBuf,
+    fstype: PathBuf,
+) -> Result<(), io::Error> {
+    let src = source
+        .clone()
+        .unwrap_or(PathBuf::from("none"))
+        .into_os_string()
+        .into_string()
+        .unwrap();
+    let tgt = target.into_os_string().into_string().unwrap();
+    let fs = fstype.into_os_string().into_string().unwrap();
+    let c_src = CString::new(src).unwrap();
+    let c_tgt = CString::new(tgt).unwrap();
+    let c_fstype = CString::new(fs).unwrap();
 
     let res = unsafe {
         libc::mount(
-            src.as_ptr(),
-            tgt.as_ptr(),
-            fstype_.as_ptr(),
+            c_src.as_ptr(),
+            c_tgt.as_ptr(),
+            c_fstype.as_ptr(),
             libc::MS_NOATIME | libc::MS_NODIRATIME,
             std::ptr::null(),
         )
