@@ -50,8 +50,6 @@ fn mknod(path: &str, major: u32, minor: u32, mode: u32) -> Result<(), io::Error>
 }
 
 fn parse_uevent(s: &str) -> (String, usize, usize) {
-    //open("/sys/dev/block/254:0/uevent", O_RDONLY) = 6
-    //read(6, "MAJOR=254\nMINOR=0\nDEVNAME=vda\nDE"..., 127) = 53
     let mut devname = "";
     let mut major: usize = 0;
     let mut minor: usize = 0;
@@ -95,4 +93,17 @@ pub(crate) fn sync() {
     unsafe {
         libc::sync();
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::setup::parse_uevent;
+    #[test]
+    fn it_parses_uevent() {
+        let (devname, major, minor) =
+            parse_uevent("ASD=123\nMAJOR=1\nMINOR=2\nDEVNAME=device\nOTHER=5");
+        assert!(devname == "device");
+        assert!(major == 1);
+        assert!(minor == 2);
+    }
 }
