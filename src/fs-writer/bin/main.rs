@@ -2,6 +2,7 @@ use clap::Parser;
 use firecracker_spawn::{Disk, Vm};
 use std::error::Error;
 use std::fmt;
+use std::fs::File;
 use std::path::PathBuf;
 
 mod utils;
@@ -35,7 +36,7 @@ impl fmt::Display for AppError {
 }
 
 fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
-    let fs = utils::identify_fs(&args.out_fs)?;
+    let fs = utils::identify_fs(&mut File::open(&args.out_fs)?)?;
     if fs.is_none() {
         return Err(Box::new(AppError::BadFs(format!(
             "Could not detect a valid filesystem on file '{}'",

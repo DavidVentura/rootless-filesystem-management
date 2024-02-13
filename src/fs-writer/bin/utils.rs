@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum Filesystem {
     Ext4,
     XFS,
@@ -22,13 +22,13 @@ impl fmt::Display for Filesystem {
     }
 }
 
-pub(crate) fn identify_fs(in_disk: &PathBuf) -> Result<Option<Filesystem>, std::io::Error> {
+pub(crate) fn identify_fs<R: Read>(reader: &mut R) -> Result<Option<Filesystem>, std::io::Error> {
     let ext4_magic = [0x53, 0xEF];
     let xfs_magic = "XFSB".as_bytes();
     let btrfs_magic = "_BHRfS_M".as_bytes();
 
     let mut buf = vec![0; 0x10_100]; // 64KiB
-    File::open(&in_disk)?.read(&mut buf)?;
+    reader.read(&mut buf)?;
 
     // https://righteousit.wordpress.com/2018/05/21/xfs-part-1-superblock/
     // The superblock is at 0x000, within which the magic is at 0x00 and is 4 bytes
@@ -67,4 +67,25 @@ pub(crate) fn pad_file(in_disk: &PathBuf, bytes_to_pad: u64) -> Result<(), std::
     let vec: Vec<u8> = vec![0; bytes_to_pad as usize];
     file.write(&vec)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::{identify_fs, Filesystem};
+    use std::fs::File;
+    use std::path::PathBuf;
+    #[test]
+    fn it_parses_filesystems() {
+        for (fname, expected) in [
+            ("fs.ext4", Filesystem::Ext4),
+            ("fs.xfs", Filesystem::XFS),
+            ("fs.btrfs", Filesystem::Btrfs),
+        ] {
+            let mut p = PathBuf::from("../../artifacts/test_artifacts/");
+            p.push(fname);
+            let mut f = File::open(&p).unwrap();
+            let res = identify_fs(&mut f).unwrap().unwrap();
+            assert!(res == expected)
+        }
+    }
 }
