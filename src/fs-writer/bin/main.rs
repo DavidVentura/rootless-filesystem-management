@@ -1,11 +1,10 @@
 use clap::Parser;
 use firecracker_spawn::{Disk, Vm};
 use std::error::Error;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::fmt;
 use std::path::PathBuf;
+
+mod utils;
 
 #[derive(Parser, Default, Debug)]
 struct Arguments {
@@ -17,64 +16,84 @@ struct Arguments {
     pad_input_with_zeroes: bool,
 }
 
-fn bytes_after_last_sector(in_disk: &PathBuf) -> u64 {
-    let block_size = 512;
-    let disk_size = File::open(&in_disk)
-        .unwrap()
-        .seek(SeekFrom::End(0))
-        .unwrap();
-
-    disk_size % block_size
+#[derive(Debug)]
+enum AppError {
+    BadFs(String),
+}
+impl Error for AppError {}
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let msg = match self {
+            AppError::BadFs(e) => e,
+        };
+        write!(f, "{}", msg)
+    }
 }
 
-fn pad_file(in_disk: &PathBuf, bytes_to_pad: u64) {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(in_disk)
-        .unwrap();
+fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
+    let fs = utils::identify_fs(&args.out_fs)?;
+    if fs.is_none() {
+        return Err(Box::new(AppError::BadFs(format!(
+            "Could not detect a valid filesystem on file '{}'",
+            args.out_fs.into_os_string().into_string().unwrap()
+        ))));
+    }
+    let fs = fs.unwrap();
 
-    let vec: Vec<u8> = vec![0; bytes_to_pad as usize];
-    file.write(&vec).unwrap();
-}
-
-fn main() {
-    let args = Arguments::parse();
-
-    let bytes_over_sector = bytes_after_last_sector(&args.in_file);
+    let bytes_over_sector = utils::bytes_after_last_sector(&args.in_file)?;
 
     if bytes_over_sector > 0 {
         if args.pad_input_with_zeroes {
             println!("Padding file..");
-            pad_file(&args.in_file, 512 - bytes_over_sector);
+            utils::pad_file(&args.in_file, 512 - bytes_over_sector)?;
         } else {
             println!(
                 "Input file ({}) must be a multiple of 512 bytes, refusing to continue.",
                 args.in_file.into_os_string().into_string().unwrap(),
             );
             println!("Pass --pad-input-with-zeroes to get the file fixed");
-            return;
+            return Ok(());
         }
     }
 
-    run(
+    run_vm(
         PathBuf::from("./rootfs.ext4"),
         PathBuf::from("./artifacts/vmlinux"),
         args.in_file,
         args.out_fs,
-    )
-    .unwrap();
-    println!("Success");
+        fs,
+    )?;
+    Ok(())
 }
 
-fn run(
+fn main() {
+    let args = Arguments::parse();
+    match run(args) {
+        Ok(()) => println!("Success"),
+        Err(b) => {
+            let e = b.downcast::<AppError>();
+            if e.is_ok() {
+                println!("{}", e.unwrap());
+                std::process::exit(1);
+            }
+            println!("Unexpected error: {:#?}", e);
+            std::process::exit(2);
+        }
+    };
+}
+
+fn run_vm(
     rootfs: PathBuf,
     kernel: PathBuf,
     disk_in: PathBuf,
     disk_out: PathBuf,
+    fstype: utils::Filesystem,
 ) -> Result<(), Box<dyn Error>> {
     //let cmd = "quiet panic=-1 reboot=t init=/strace -- -f /init /dev/vdb /dev/vdc ext4";
-    let cmd = "quiet panic=-1 reboot=t init=/init RUST_BACKTRACE=1 -- /dev/vdb /dev/vdc ext4";
+    let cmd = format!(
+        "quiet panic=-1 reboot=t init=/init RUST_BACKTRACE=1 -- /dev/vdb /dev/vdc {}",
+        fstype
+    );
     let v = Vm {
         vcpu_count: 1,
         mem_size_mib: 128,
