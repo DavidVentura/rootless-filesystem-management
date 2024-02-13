@@ -19,12 +19,16 @@ struct Arguments {
 #[derive(Debug)]
 enum AppError {
     BadFs(String),
+    BadInputFile(String),
 }
 impl Error for AppError {}
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let msg = match self {
-            AppError::BadFs(e) => e,
+            AppError::BadFs(e) => e.to_string(),
+            AppError::BadInputFile(e) => format!(
+                "Input file ({}) must be a multiple of 512 bytes, refusing to continue.\nPass --pad-input-with-zeroes to get the file fixed",
+                e),
         };
         write!(f, "{}", msg)
     }
@@ -47,12 +51,9 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
             println!("Padding file..");
             utils::pad_file(&args.in_file, 512 - bytes_over_sector)?;
         } else {
-            println!(
-                "Input file ({}) must be a multiple of 512 bytes, refusing to continue.",
+            return Err(Box::new(AppError::BadInputFile(
                 args.in_file.into_os_string().into_string().unwrap(),
-            );
-            println!("Pass --pad-input-with-zeroes to get the file fixed");
-            return Ok(());
+            )));
         }
     }
 
