@@ -1,0 +1,11 @@
+[package]
+name = "fs-writer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+firecracker-spawn = { git = "https://github.com/DavidVentura/firecracker-spawn.git", branch = "master" }
+
+[[bin]]
+name = "fs-writer"
+path = "bin/main.rs"

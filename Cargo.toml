@@ -1,0 +1,7 @@
+[workspace]
+members = ["src/init", "src/fs-writer"]
+default-members = ["src/init", "src/fs-writer"]
+resolver = "2"
+
+[patch.crates-io]
+kvm-bindings = { git = "https://github.com/firecracker-microvm/kvm-bindings", tag = "v0.7.0-2", features = ["fam-wrappers"] }
