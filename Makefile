@@ -1,6 +1,7 @@
-.PHONY: run
+.PHONY: run test_artifacts
 .SUFFIXES:
 SHELL = /bin/bash
+FS_ARTIFACTS = artifacts/test_artifacts/fs.ext4 artifacts/test_artifacts/fs.xfs artifacts/test_artifacts/fs.btrfs
 
 target/release/init: src/init/bin/*.rs
 	cargo build --target x86_64-unknown-linux-musl --release --bin $(@F)
@@ -25,3 +26,10 @@ output.ext4:
 
 run: target/release/fs-writer rootfs.ext4 output.ext4
 	./target/release/fs-writer --in-file disk.tar.gz --out-fs output.ext4 --pad-input-with-zeroes
+
+test_artifacts: $(FS_ARTIFACTS)
+	:
+$(FS_ARTIFACTS):
+	truncate -s 300M $@
+	mkfs$(suffix $@) -q $@
+	truncate -s 200K $@
