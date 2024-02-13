@@ -1,11 +1,21 @@
+use clap::Parser;
 use firecracker_spawn::{Disk, Vm};
-use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::PathBuf;
+
+#[derive(Parser, Default, Debug)]
+struct Arguments {
+    #[arg(short, long)]
+    in_file: PathBuf,
+    #[arg(short, long)]
+    out_fs: PathBuf,
+    #[arg(long, action)]
+    pad_input_with_zeroes: bool,
+}
 
 fn bytes_after_last_sector(in_disk: &PathBuf) -> u64 {
     let block_size = 512;
@@ -27,19 +37,20 @@ fn pad_file(in_disk: &PathBuf, bytes_to_pad: u64) {
     let vec: Vec<u8> = vec![0; bytes_to_pad as usize];
     file.write(&vec).unwrap();
 }
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let in_disk = PathBuf::from(&args[1]);
-    let pad = true;
-    let bytes_over_sector = bytes_after_last_sector(&in_disk);
+    let args = Arguments::parse();
+
+    let bytes_over_sector = bytes_after_last_sector(&args.in_file);
+
     if bytes_over_sector > 0 {
-        if pad {
+        if args.pad_input_with_zeroes {
             println!("Padding file..");
-            pad_file(&in_disk, 512 - bytes_over_sector);
+            pad_file(&args.in_file, 512 - bytes_over_sector);
         } else {
             println!(
                 "Input file ({}) must be a multiple of 512 bytes, refusing to continue.",
-                in_disk.into_os_string().into_string().unwrap(),
+                args.in_file.into_os_string().into_string().unwrap(),
             );
             println!("Pass --pad-input-with-zeroes to get the file fixed");
             return;
@@ -49,8 +60,8 @@ fn main() {
     run(
         PathBuf::from("./rootfs.ext4"),
         PathBuf::from("./artifacts/vmlinux"),
-        PathBuf::from(&args[1]),
-        PathBuf::from(&args[2]),
+        args.in_file,
+        args.out_fs,
     )
     .unwrap();
     println!("Success");

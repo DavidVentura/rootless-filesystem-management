@@ -6,7 +6,7 @@ This can unpack a `tar.gz` file into a filesystem image (`ext4`/`xfs`/`btrfs`) w
 $ tar tvf disk.tar.gz | wc -l                                                                                                                                     
 5283
 
-$ time ./target/release/fs-writer disk.tar.gz output.ext4
+./target/release/fs-writer --in-file disk.tar.gz --out-fs output.ext4 --pad-input-with-zeroes
 Padding file..
 Success
 

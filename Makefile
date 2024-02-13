@@ -24,4 +24,4 @@ output.ext4:
 	mkfs.ext4 output.ext4
 
 run: target/release/fs-writer rootfs.ext4 output.ext4
-	./target/release/fs-writer disk.tar.gz output.ext4
+	./target/release/fs-writer --in-file disk.tar.gz --out-fs output.ext4 --pad-input-with-zeroes
