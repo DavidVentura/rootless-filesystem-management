@@ -1,8 +1,8 @@
 # "Rootless" filesystem management
 
-This can unpack a `tar.gz` file into an empty `ext4`/`xfs`/`btrfs` filesystem, without using sudo to do so:
+This can unpack a `tar.gz` file into a filesystem image (`ext4`/`xfs`/`btrfs`) without using sudo to do so:
 
-```
+```bash
 $ tar tvf disk.tar.gz | wc -l                                                                                                                                     
 5283
 
@@ -15,7 +15,6 @@ real    0m0.975s
 $ sudo mount output.ext4
 $ sudo find output.ext4 | wc -l
 5283
-
 ```
 
 ## How does it work
@@ -32,6 +31,8 @@ This tool is comparable to [guestfish](https://libguestfs.org/guestfish.1.html)
 ## Other
 
 The input file must be a multiple of 512 bytes, as the file is mapped in sectors to the guest. This limitation is coming from [firecracker/virtio/vfs](https://github.com/firecracker-microvm/firecracker/blob/aa6d25d0d226732602733d9f007bcf345d7aaa76/src/vmm/src/devices/virtio/block/virtio/device.rs#L93).
+
+This tool will pad the input file with zeroes if asked to do so. This is fine for `.tar.gz` files but may not be fine for other formats.
 
 ## Why
 
