@@ -43,6 +43,7 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
         ))));
     }
     let fs = fs.unwrap();
+    println!("Detected {} as output", fs);
 
     let bytes_over_sector = utils::bytes_after_last_sector(&args.in_file)?;
 
