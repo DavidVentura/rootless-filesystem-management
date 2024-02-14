@@ -126,6 +126,7 @@ fn run_vm(
             },
         ],
         net_config: None,
+        use_hugepages: false,
     };
     v.make()?;
     Ok(())
