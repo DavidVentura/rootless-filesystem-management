@@ -101,9 +101,8 @@ fn run_vm(
     disk_out: PathBuf,
     fstype: utils::Filesystem,
 ) -> Result<(), Box<dyn Error>> {
-    //let cmd = "quiet panic=-1 reboot=t init=/strace -- -f /init /dev/vdb /dev/vdc ext4";
     let cmd = format!(
-        "quiet panic=-1 reboot=t init=/init RUST_BACKTRACE=1 -- /dev/vdb /dev/vdc {}",
+        "quiet mitigations=off panic=-1 reboot=t init=/init RUST_BACKTRACE=1 -- /dev/vdb /dev/vdc {}",
         fstype
     );
     let v = Vm {
