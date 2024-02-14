@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -67,6 +68,21 @@ pub(crate) fn pad_file(in_disk: &PathBuf, bytes_to_pad: u64) -> Result<(), std::
     let vec: Vec<u8> = vec![0; bytes_to_pad as usize];
     file.write(&vec)?;
     Ok(())
+}
+
+pub(crate) fn buf_to_fd(buf: &[u8]) -> Result<File, Box<dyn Error>> {
+    let opts = memfd::MemfdOptions::default().allow_sealing(true);
+    let mfd = opts.create("kernel")?;
+
+    mfd.as_file().set_len(buf.len() as u64)?;
+    mfd.add_seals(&[memfd::FileSeal::SealShrink, memfd::FileSeal::SealGrow])?;
+
+    // Prevent further sealing changes.
+    mfd.add_seal(memfd::FileSeal::SealSeal)?;
+    let mut f = mfd.into_file();
+    f.write(buf)?;
+    f.seek(std::io::SeekFrom::Start(0))?;
+    Ok(f)
 }
 
 #[cfg(test)]

@@ -3,13 +3,16 @@ use firecracker_spawn::{Disk, Vm};
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::{Seek, SeekFrom, Write};
 use std::path::PathBuf;
+use tempfile::NamedTempFile;
 
 mod utils;
 
 #[derive(Parser, Default, Debug)]
 struct Arguments {
+    #[arg(short, long)]
+    root_fs: Option<PathBuf>,
     #[arg(short, long)]
     in_file: PathBuf,
     #[arg(short, long)]
@@ -37,22 +40,9 @@ impl fmt::Display for AppError {
 }
 
 const KERNEL_BYTES: &[u8] = include_bytes!("../../../artifacts/vmlinux");
-fn buf_to_fd(buf: &[u8]) -> Result<File, Box<dyn Error>> {
-    let opts = memfd::MemfdOptions::default().allow_sealing(true);
-    let mfd = opts.create("kernel")?;
-
-    mfd.as_file().set_len(buf.len() as u64)?;
-    mfd.add_seals(&[memfd::FileSeal::SealShrink, memfd::FileSeal::SealGrow])?;
-
-    // Prevent further sealing changes.
-    mfd.add_seal(memfd::FileSeal::SealSeal)?;
-    let mut f = mfd.into_file();
-    f.write(buf)?;
-    f.seek(std::io::SeekFrom::Start(0))?;
-    Ok(f)
-}
+const ROOTFS_BYTES: &[u8] = include_bytes!("../../../artifacts/bootstrap-rootfs.ext4");
 fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
-    let kernel = buf_to_fd(KERNEL_BYTES)?;
+    let kernel = utils::buf_to_fd(KERNEL_BYTES)?;
 
     let fs = utils::identify_fs(&mut File::open(&args.out_fs)?)?;
     if fs.is_none() {
@@ -77,13 +67,14 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    run_vm(
-        kernel,
-        PathBuf::from("./rootfs.ext4"),
-        args.in_file,
-        args.out_fs,
-        fs,
-    )?;
+    let mut n = NamedTempFile::new()?;
+    let root_fs = args.root_fs.unwrap_or_else(|| {
+        n.write(ROOTFS_BYTES).unwrap();
+        n.seek(SeekFrom::Start(0)).unwrap();
+        n.path().to_path_buf()
+    });
+
+    run_vm(kernel, root_fs, args.in_file, args.out_fs, fs)?;
     Ok(())
 }
 
