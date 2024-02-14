@@ -3,6 +3,7 @@ use firecracker_spawn::{Disk, Vm};
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
+use std::io::prelude::*;
 use std::path::PathBuf;
 
 mod utils;
@@ -35,7 +36,24 @@ impl fmt::Display for AppError {
     }
 }
 
+const KERNEL_BYTES: &[u8] = include_bytes!("../../../artifacts/vmlinux");
+fn buf_to_fd(buf: &[u8]) -> Result<File, Box<dyn Error>> {
+    let opts = memfd::MemfdOptions::default().allow_sealing(true);
+    let mfd = opts.create("kernel")?;
+
+    mfd.as_file().set_len(buf.len() as u64)?;
+    mfd.add_seals(&[memfd::FileSeal::SealShrink, memfd::FileSeal::SealGrow])?;
+
+    // Prevent further sealing changes.
+    mfd.add_seal(memfd::FileSeal::SealSeal)?;
+    let mut f = mfd.into_file();
+    f.write(buf)?;
+    f.seek(std::io::SeekFrom::Start(0))?;
+    Ok(f)
+}
 fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
+    let kernel = buf_to_fd(KERNEL_BYTES)?;
+
     let fs = utils::identify_fs(&mut File::open(&args.out_fs)?)?;
     if fs.is_none() {
         return Err(Box::new(AppError::BadFs(format!(
@@ -60,8 +78,8 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
     }
 
     run_vm(
+        kernel,
         PathBuf::from("./rootfs.ext4"),
-        PathBuf::from("./artifacts/vmlinux"),
         args.in_file,
         args.out_fs,
         fs,
@@ -86,8 +104,8 @@ fn main() {
 }
 
 fn run_vm(
+    kernel: File,
     rootfs: PathBuf,
-    kernel: PathBuf,
     disk_in: PathBuf,
     disk_out: PathBuf,
     fstype: utils::Filesystem,
@@ -100,8 +118,8 @@ fn run_vm(
     let v = Vm {
         vcpu_count: 1,
         mem_size_mib: 128,
+        kernel,
         kernel_cmdline: cmd.to_string(),
-        kernel_path: kernel,
         rootfs: Disk {
             path: rootfs,
             read_only: true,

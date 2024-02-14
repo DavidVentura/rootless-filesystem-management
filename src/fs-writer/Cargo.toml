@@ -7,6 +7,7 @@ edition = "2021"
 clap = { version = "4.5.0", features = ["derive"] }
 firecracker-spawn = { git = "https://github.com/DavidVentura/firecracker-spawn.git", branch = "master" }
 #firecracker-spawn = { path = "/home/david/git/firecracker-spawn"}
+memfd = "0.6.4"
 
 [[bin]]
 name = "fs-writer"
