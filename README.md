@@ -24,9 +24,13 @@ This tool creates a virtual machine with [firecracker](https://github.com/firecr
 - source tar.gz file (read only)
 - destination filesystem (read write)
 
-When the VM boots, the custom init process unpacks the source tar file into the destination filesystem and exits.
+The compiled binary embeds a Linux kernel (build config at `artifacts/kernel-config`) and a "bootstrap" filesystem, which will
+unpack the source tar.gz file into the destination filesystem and exits.
 
-This tool is comparable to [guestfish](https://libguestfs.org/guestfish.1.html)
+Alternative bootstrap filesystems (eg: unpack different formats) can be provided with `--root-fs`.
+
+This tool is comparable to [guestfish](https://libguestfs.org/guestfish.1.html).
+
 
 ## Other
 
