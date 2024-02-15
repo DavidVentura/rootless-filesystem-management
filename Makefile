@@ -9,7 +9,7 @@ target/x86_64-unknown-linux-musl/release/init: src/init/bin/*.rs
 	cargo build --target x86_64-unknown-linux-musl --release --bin $(@F)
 	touch $@
 
-target/x86_64-unknown-linux-musl/release/fs-writer: src/fs-writer/bin/*.rs artifacts/vmlinux artifacts/bootstrap-rootfs.ext4
+target/x86_64-unknown-linux-musl/release/fs-writer: src/fs-writer/bin/*.rs artifacts/vmlinux.gz artifacts/bootstrap-rootfs.ext4
 	cargo build --target x86_64-unknown-linux-musl --release --bin $(@F)
 
 artifacts/bootstrap-rootfs.ext4: $(RELEASE_DIR)/init

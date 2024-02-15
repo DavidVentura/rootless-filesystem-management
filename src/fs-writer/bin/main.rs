@@ -39,10 +39,10 @@ impl fmt::Display for AppError {
     }
 }
 
-const KERNEL_BYTES: &[u8] = include_bytes!("../../../artifacts/vmlinux");
+const KERNEL_BYTES: &[u8] = include_bytes!("../../../artifacts/vmlinux.gz");
 const ROOTFS_BYTES: &[u8] = include_bytes!("../../../artifacts/bootstrap-rootfs.ext4");
 fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
-    let kernel = utils::buf_to_fd(KERNEL_BYTES)?;
+    let kernel = utils::gz_buf_to_fd(KERNEL_BYTES)?;
 
     let fs = utils::identify_fs(&mut File::open(&args.out_fs)?)?;
     if fs.is_none() {
