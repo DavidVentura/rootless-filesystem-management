@@ -15,8 +15,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: Setup
+      run: sudo apt-get update && sudo apt-get install -y musl-tools build-essential make linux-libc-dev && touch artifacts/bootstrap-rootfs.ext4
+    - name: Add rustup target
+      run: rustup target add x86_64-unknown-linux-musl
     - name: Build
-      run: cargo build --verbose
+      run: make build
     - name: Run tests
-      run: cargo test --verbose
+      run: make test
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: fs-writer
+        path: |
+          target/x86_64-unknown-linux-musl/release/fs-writer
