@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# 0.13.1 seems to have broken generation
+# https://github.com/aws/aws-lc-rs/issues/348
+aws-lc-sys = "=0.13.0"
 clap = { version = "4.5.0", features = ["derive"] }
 firecracker-spawn = { git = "https://github.com/DavidVentura/firecracker-spawn.git", branch = "master" }
 #firecracker-spawn = { path = "/home/david/git/firecracker-spawn"}
