@@ -13,6 +13,8 @@ flate2 = "1.0.28"
 #firecracker-spawn = { path = "/home/david/git/firecracker-spawn"}
 memfd = "0.6.4"
 tempfile = "3.10.0"
+log = "0.4.20"
+simple_logger = "4.3.3"
 
 [[bin]]
 name = "fs-writer"

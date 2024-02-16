@@ -21,9 +21,11 @@ fn main() {
     let out_disk = PathBuf::from(&args[2]);
     let filesystem = PathBuf::from(&args[3]);
 
+    println!("Setting up environment");
     setup::setup_environment().unwrap();
+    println!("Mounting filesystem");
     setup::mount(Some(out_disk), destination.clone(), filesystem).unwrap();
-
+    println!("Unpacking filesystem");
     let res = unpack(in_disk, destination);
     match res {
         Err(e) => println!("{:#?}", e),
