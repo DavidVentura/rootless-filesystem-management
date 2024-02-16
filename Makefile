@@ -1,5 +1,7 @@
 .PHONY: run test_artifacts build
 .SUFFIXES:
+.DEFAULT_GOAL := build
+
 SHELL = /bin/bash
 FS_ARTIFACTS = artifacts/test_artifacts/fs.ext4 artifacts/test_artifacts/fs.xfs artifacts/test_artifacts/fs.btrfs
 RELEASE_DIR = target/x86_64-unknown-linux-musl/release
