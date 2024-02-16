@@ -71,24 +71,26 @@ pub(crate) fn pad_file(in_disk: &PathBuf, bytes_to_pad: u64) -> Result<(), std::
     Ok(())
 }
 
-pub(crate) fn gz_buf_to_fd(buf: &[u8]) -> Result<File, Box<dyn Error>> {
+pub(crate) fn buf_to_fd(name: &str, buf: &[u8]) -> Result<File, Box<dyn Error>> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
-    let mfd = opts.create("kernel")?;
-
-    let mut gz = GzDecoder::new(buf);
-    let mut dec_buf = Vec::new();
-    gz.read_to_end(&mut dec_buf)?;
-
-    mfd.as_file().set_len(dec_buf.len() as u64)?;
+    let mfd = opts.create(name)?;
+    mfd.as_file().set_len(buf.len() as u64)?;
     mfd.add_seals(&[memfd::FileSeal::SealShrink, memfd::FileSeal::SealGrow])?;
 
     // Prevent further sealing changes.
     mfd.add_seal(memfd::FileSeal::SealSeal)?;
     let mut f = mfd.into_file();
 
-    _ = f.write(&dec_buf)?;
+    _ = f.write(&buf)?;
     f.seek(std::io::SeekFrom::Start(0))?;
     Ok(f)
+}
+
+pub(crate) fn gz_buf_to_fd(name: &str, buf: &[u8]) -> Result<File, Box<dyn Error>> {
+    let mut gz = GzDecoder::new(buf);
+    let mut dec_buf = Vec::new();
+    gz.read_to_end(&mut dec_buf)?;
+    buf_to_fd(name, &dec_buf)
 }
 
 #[cfg(test)]

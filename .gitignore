@@ -22,3 +22,5 @@ disk.tar.gz
 output.ext4
 rootfs.ext4
 mntdir
+initrd
+artifacts/bootstrap-initrd.cpio.gz

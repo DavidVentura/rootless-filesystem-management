@@ -26,15 +26,14 @@ $ sudo find output.ext4 | wc -l
 
 ## How does it work
 
-This tool creates a virtual machine with [firecracker](https://github.com/firecracker-microvm/firecracker/tree/main), adds 3 memory-mapped block devices:
-- "rootfs", containing the unpacking tool (read only)
+This tool creates a virtual machine with [firecracker](https://github.com/firecracker-microvm/firecracker/tree/main), adds 2 memory-mapped block devices:
 - source tar.gz file (read only)
 - destination filesystem (read write)
 
-The compiled binary embeds a Linux kernel (build config at `artifacts/kernel-config`) and a "bootstrap" filesystem, which will
+The compiled binary embeds a Linux kernel (build config at `artifacts/kernel-config`) and a "bootstrap" initrd, which will
 unpack the source tar.gz file into the destination filesystem and exits.
 
-Alternative bootstrap filesystems (eg: unpack different formats) can be provided with `--root-fs`.
+Alternative init ramdisks (eg: to unpack different formats) can be provided with `--alternative-initrd`.
 
 This tool is comparable to [guestfish](https://libguestfs.org/guestfish.1.html).
 

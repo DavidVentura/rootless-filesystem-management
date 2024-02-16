@@ -11,19 +11,17 @@ target/x86_64-unknown-linux-musl/release/init: src/init/bin/*.rs
 	cargo build --target x86_64-unknown-linux-musl --release --bin $(@F)
 	touch $@
 
-target/x86_64-unknown-linux-musl/release/fs-writer: src/fs-writer/bin/*.rs artifacts/vmlinux.gz artifacts/bootstrap-rootfs.ext4
+target/x86_64-unknown-linux-musl/release/fs-writer: src/fs-writer/bin/*.rs artifacts/vmlinux.gz artifacts/bootstrap-initrd.cpio.gz
 	cargo build --target x86_64-unknown-linux-musl --release --bin $(@F)
 
-artifacts/bootstrap-rootfs.ext4: $(RELEASE_DIR)/init
-	mkdir -p mntdir
-	if [ ! -f $@ ]; then truncate -s 1M $@ && mkfs.ext4 $@; fi
-	sudo mount $@ mntdir
-	# sudo cp -t mntdir artifacts/strace artifacts/busybox
-	sudo strip $(RELEASE_DIR)/init
-	sudo cp $(RELEASE_DIR)/init mntdir/init
-	sudo mkdir -p mntdir/{dev,sys,proc,destination}
-	sudo umount mntdir
-	touch $@
+artifacts/bootstrap-initrd.cpio.gz: $(RELEASE_DIR)/init
+	mkdir -p initrd
+	# cp -t mntdir artifacts/strace artifacts/busybox
+	mkdir -p initrd/{dev,sys,proc,destination}
+	strip $(RELEASE_DIR)/init
+	cp $(RELEASE_DIR)/init initrd/init
+	cd initrd && find . -print0 | cpio --null --create --verbose --format=newc | gzip > ../$@
+	cd initrd && find . -print0 | cpio --null --create --verbose --format=newc > ../artifacts/bootstrap-initrd.cpio
 
 output.ext4:
 	truncate -s 350M output.ext4

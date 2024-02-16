@@ -5,9 +5,8 @@ use simple_logger::SimpleLogger;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
-use std::io::{sink, Seek, SeekFrom, Write};
+use std::io::{sink, Write};
 use std::path::PathBuf;
-use tempfile::NamedTempFile;
 
 mod utils;
 
@@ -16,9 +15,9 @@ struct Arguments {
     #[arg(
         short,
         long,
-        help = "Path to alternative rootfs, the default expects a .tar.gz input file and will unpack it to out_fs"
+        help = "Path to an alternative initrd, the default expects a .tar.gz input file and will unpack it to out_fs"
     )]
-    root_fs: Option<PathBuf>,
+    alternative_initrd: Option<PathBuf>,
     #[arg(short, long)]
     in_file: PathBuf,
     #[arg(short, long)]
@@ -91,12 +90,12 @@ impl Write for LogAdapter {
 }
 
 const KERNEL_BYTES: &[u8] = include_bytes!("../../../artifacts/vmlinux.gz");
-const ROOTFS_BYTES: &[u8] = include_bytes!("../../../artifacts/bootstrap-rootfs.ext4");
+const INITRD_BYTES: &[u8] = include_bytes!("../../../artifacts/bootstrap-initrd.cpio.gz");
 fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
     setup_logging(args.verbose);
     debug!("Initializing");
     debug!("Unpacking kernel");
-    let kernel = utils::gz_buf_to_fd(KERNEL_BYTES)?;
+    let kernel = utils::gz_buf_to_fd("kernel", KERNEL_BYTES)?;
 
     debug!("Identifying target fs");
     let fs = utils::identify_fs(&mut File::open(&args.out_fs)?)?;
@@ -121,13 +120,13 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let mut n = NamedTempFile::new()?;
-    let root_fs = args.root_fs.unwrap_or_else(|| {
-        debug!("Unpacking bootstrap rootfs");
-        _ = n.write(ROOTFS_BYTES).unwrap();
-        n.seek(SeekFrom::Start(0)).unwrap();
-        n.path().to_path_buf()
-    });
+    let initrd = match args.alternative_initrd {
+        None => utils::gz_buf_to_fd("initrd", INITRD_BYTES)?,
+        Some(p) => {
+            debug!("Loading alternative initrd");
+            File::open(p)?
+        }
+    };
 
     info!("Starting VM");
     let output: Box<dyn SerialOut> = if args.verbose > 1 {
@@ -137,7 +136,7 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
     } else {
         Box::new(sink())
     };
-    run_vm(kernel, root_fs, args.in_file, args.out_fs, fs, output)?;
+    run_vm(kernel, initrd, args.in_file, args.out_fs, fs, output)?;
     Ok(())
 }
 
@@ -159,14 +158,14 @@ fn main() {
 
 fn run_vm(
     kernel: File,
-    rootfs: PathBuf,
+    initrd: File,
     disk_in: PathBuf,
     disk_out: PathBuf,
     fstype: utils::Filesystem,
     output: Box<dyn SerialOut>,
 ) -> Result<(), Box<dyn Error>> {
     let cmd = format!(
-        "quiet mitigations=off panic=-1 reboot=t init=/init RUST_BACKTRACE=1 -- /dev/vdb /dev/vdc {}",
+        "quiet mitigations=off panic=-1 reboot=t init=/init RUST_BACKTRACE=1 -- /dev/vda /dev/vdb {}",
         fstype
     );
     let v = Vm {
@@ -174,10 +173,8 @@ fn run_vm(
         mem_size_mib: 128,
         kernel,
         kernel_cmdline: cmd.to_string(),
-        rootfs: Disk {
-            path: rootfs,
-            read_only: true,
-        },
+        rootfs: None,
+        initrd: Some(initrd),
         extra_disks: vec![
             Disk {
                 path: disk_in,
