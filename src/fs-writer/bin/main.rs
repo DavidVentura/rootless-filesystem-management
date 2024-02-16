@@ -73,7 +73,8 @@ struct LogAdapter {
 
 impl Write for LogAdapter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        //debug!("{}", std::str::from_utf8(buf).unwrap());
+        // The serial device that calls write will do write + flush for every character
+        // so this function aggregates the characters and only flushes once per newline
         for c in buf {
             if *c == '\n' as u8 {
                 trace!("[K] {}", std::str::from_utf8(&self.line_so_far).unwrap());
