@@ -25,7 +25,7 @@ fn main() {
     setup::setup_environment().unwrap();
     println!("Mounting filesystem");
     setup::mount(Some(out_disk), destination.clone(), filesystem).unwrap();
-    println!("Unpacking filesystem");
+    println!("Unpacking payload");
     let res = unpack(in_disk, destination);
     match res {
         Err(e) => println!("{:#?}", e),

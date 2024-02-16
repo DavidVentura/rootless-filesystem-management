@@ -76,7 +76,7 @@ impl Write for LogAdapter {
         //debug!("{}", std::str::from_utf8(buf).unwrap());
         for c in buf {
             if *c == '\n' as u8 {
-                trace!("{}", std::str::from_utf8(&self.line_so_far).unwrap());
+                trace!("[K] {}", std::str::from_utf8(&self.line_so_far).unwrap());
                 self.line_so_far.clear();
             } else {
                 self.line_so_far.push(*c);

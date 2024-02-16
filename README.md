@@ -3,15 +3,22 @@
 This can unpack a `tar.gz` file into a filesystem image (`ext4`/`xfs`/`btrfs`) without using sudo to do so:
 
 ```bash
-$ tar tvf disk.tar.gz | wc -l                                                                                                                                     
+$ tar tvf disk.tar.gz | wc -l
 5283
 
-./target/release/fs-writer --in-file disk.tar.gz --out-fs output.ext4 --pad-input-with-zeroes
-Padding file..
-Success
+$ fs-writer --in-file disk.tar.gz --out-fs output.ext4 --pad-input-with-zeroes -vvv
+2024-02-16T10:07:30.368Z DEBUG [fs_writer] Initializing
+2024-02-16T10:07:30.368Z DEBUG [fs_writer] Unpacking kernel
+2024-02-16T10:07:30.408Z DEBUG [fs_writer] Identifying target fs
+2024-02-16T10:07:30.408Z DEBUG [fs_writer] Detected ext4 as output
+2024-02-16T10:07:30.408Z DEBUG [fs_writer] Unpacking bootstrap rootfs
+2024-02-16T10:07:30.409Z INFO  [fs_writer] Starting VM
+2024-02-16T10:07:30.427Z TRACE [fs_writer] Setting up environment
+2024-02-16T10:07:30.427Z TRACE [fs_writer] Mounting filesystem
+2024-02-16T10:07:30.429Z TRACE [fs_writer] Unpacking payload
+2024-02-16T10:07:30.518Z INFO  [fs_writer] Success
 
-real    0m0.975s
-
+$ # validate it unpacked
 $ sudo mount output.ext4
 $ sudo find output.ext4 | wc -l
 5283
