@@ -76,7 +76,7 @@ impl Write for LogAdapter {
         // The serial device that calls write will do write + flush for every character
         // so this function aggregates the characters and only flushes once per newline
         for c in buf {
-            if *c == '\n' as u8 {
+            if *c == b'\n' {
                 trace!("[K] {}", std::str::from_utf8(&self.line_so_far).unwrap());
                 self.line_so_far.clear();
             } else {
@@ -124,7 +124,7 @@ fn run(args: Arguments) -> Result<(), Box<dyn Error>> {
     let mut n = NamedTempFile::new()?;
     let root_fs = args.root_fs.unwrap_or_else(|| {
         debug!("Unpacking bootstrap rootfs");
-        n.write(ROOTFS_BYTES).unwrap();
+        _ = n.write(ROOTFS_BYTES).unwrap();
         n.seek(SeekFrom::Start(0)).unwrap();
         n.path().to_path_buf()
     });

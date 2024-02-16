@@ -10,14 +10,14 @@ use std::path::PathBuf;
 #[derive(Debug, PartialEq)]
 pub(crate) enum Filesystem {
     Ext4,
-    XFS,
+    Xfs,
     Btrfs,
 }
 impl fmt::Display for Filesystem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str_ = match self {
             Filesystem::Ext4 => "ext4",
-            Filesystem::XFS => "xfs",
+            Filesystem::Xfs => "xfs",
             Filesystem::Btrfs => "btrfs",
         };
         write!(f, "{}", str_)
@@ -30,7 +30,7 @@ pub(crate) fn identify_fs<R: Read>(reader: &mut R) -> Result<Option<Filesystem>,
     let btrfs_magic = "_BHRfS_M".as_bytes();
 
     let mut buf = vec![0; 0x10_100]; // 64KiB
-    reader.read(&mut buf)?;
+    reader.read_exact(&mut buf)?;
 
     // https://righteousit.wordpress.com/2018/05/21/xfs-part-1-superblock/
     // The superblock is at 0x000, within which the magic is at 0x00 and is 4 bytes
@@ -45,7 +45,7 @@ pub(crate) fn identify_fs<R: Read>(reader: &mut R) -> Result<Option<Filesystem>,
     let maybe_btrfs_magic = buf[0x10_040..0x10_048].to_vec();
 
     if maybe_xfs_magic == xfs_magic {
-        return Ok(Some(Filesystem::XFS));
+        return Ok(Some(Filesystem::Xfs));
     }
     if maybe_ext4_magic == ext4_magic {
         return Ok(Some(Filesystem::Ext4));
@@ -58,16 +58,16 @@ pub(crate) fn identify_fs<R: Read>(reader: &mut R) -> Result<Option<Filesystem>,
 
 pub(crate) fn bytes_after_last_sector(in_disk: &PathBuf) -> Result<u64, std::io::Error> {
     let block_size = 512;
-    let disk_size = File::open(&in_disk)?.seek(SeekFrom::End(0))?;
+    let disk_size = File::open(in_disk)?.seek(SeekFrom::End(0))?;
 
     Ok(disk_size % block_size)
 }
 
 pub(crate) fn pad_file(in_disk: &PathBuf, bytes_to_pad: u64) -> Result<(), std::io::Error> {
-    let mut file = OpenOptions::new().write(true).append(true).open(in_disk)?;
+    let mut file = OpenOptions::new().append(true).open(in_disk)?;
 
     let vec: Vec<u8> = vec![0; bytes_to_pad as usize];
-    file.write(&vec)?;
+    _ = file.write(&vec)?;
     Ok(())
 }
 
@@ -86,7 +86,7 @@ pub(crate) fn gz_buf_to_fd(buf: &[u8]) -> Result<File, Box<dyn Error>> {
     mfd.add_seal(memfd::FileSeal::SealSeal)?;
     let mut f = mfd.into_file();
 
-    f.write(&dec_buf)?;
+    _ = f.write(&dec_buf)?;
     f.seek(std::io::SeekFrom::Start(0))?;
     Ok(f)
 }
@@ -100,7 +100,7 @@ mod tests {
     fn it_parses_filesystems() {
         for (fname, expected) in [
             ("fs.ext4", Filesystem::Ext4),
-            ("fs.xfs", Filesystem::XFS),
+            ("fs.xfs", Filesystem::Xfs),
             ("fs.btrfs", Filesystem::Btrfs),
         ] {
             let mut p = PathBuf::from("../../artifacts/test_artifacts/");

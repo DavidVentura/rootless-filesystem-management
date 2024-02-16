@@ -42,7 +42,7 @@ pub(crate) fn mount(
 fn mknod(path: &str, major: u32, minor: u32, mode: u32) -> Result<(), io::Error> {
     let devnum = libc::makedev(major, minor);
     let path = CString::new(path).unwrap();
-    let res = unsafe { libc::mknod(path.as_ptr(), mode | 0666, devnum) };
+    let res = unsafe { libc::mknod(path.as_ptr(), mode | 0o666, devnum) };
     if res == -1 {
         return Err(io::Error::last_os_error());
     }
@@ -53,8 +53,8 @@ fn parse_uevent(s: &str) -> (String, usize, usize) {
     let mut devname = "";
     let mut major: usize = 0;
     let mut minor: usize = 0;
-    for line in s.split("\n") {
-        let parts: Vec<&str> = line.split("=").collect();
+    for line in s.split('\n') {
+        let parts: Vec<&str> = line.split('=').collect();
         if parts.len() != 2 {
             continue;
         }

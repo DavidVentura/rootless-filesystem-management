@@ -27,9 +27,8 @@ fn main() {
     setup::mount(Some(out_disk), destination.clone(), filesystem).unwrap();
     println!("Unpacking payload");
     let res = unpack(in_disk, destination);
-    match res {
-        Err(e) => println!("{:#?}", e),
-        Ok(()) => (),
+    if let Err(e) = res {
+        println!("{:#?}", e);
     };
 
     setup::sync();
